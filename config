@@ -2,4 +2,4 @@ CORE_LIBS="$CORE_LIBS -lboost_thread -lboost_system -lthrift "
 ngx_addon_name=ngx_photo_thrift_module
 HTTP_AUX_FILTER_MODULES="$HTTP_AUX_FILTER_MODULES ngx_photo_thrift_module"
 CFLAGS="$CFLAGS -ggdb -D_DEBUG -D_LARGEFILE_SOURCE -I. "
-NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/src/murmur3.c $ngx_addon_dir/src/gen-cpp-PhotoDB/PhotoDB.cpp $ngx_addon_dir/src/gen-cpp-PhotoDB/PhotoDB_Client.cpp $ngx_addon_dir/src/gen-cpp-PhotoDB/photodb_types.cpp $ngx_addon_dir/src/gen-cpp-PhotoDB/type_types.cpp $ngx_addon_dir/src/ngx_http_photo_thrift_module.c"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/src/murmur3.c $ngx_addon_dir/src/gen-cpp-PhotoDB/PhotoDB.cpp $ngx_addon_dir/src/photodb_client.cpp $ngx_addon_dir/src/gen-cpp-PhotoDB/photodb_types.cpp $ngx_addon_dir/src/gen-cpp-PhotoDB/type_types.cpp $ngx_addon_dir/src/ngx_http_photo_thrift_module.c"
