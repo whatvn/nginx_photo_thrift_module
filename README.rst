@@ -16,6 +16,7 @@ Usage
 To compile into nginx
 
 ::
+
     ./configure --with-ld-opt="-lstdc++" --add-module=nginx_photo_thrift_module     
 
 I wrote this module using nginx-1.7.8
