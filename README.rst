@@ -4,7 +4,7 @@ nginx thrift module example
 
 * Why I wrote this
 	1. People keep trying to write http server to serve content from thrift server using various libraries (proxygen, libevent...) but they forget nginx always perform better 
-	2. it's difficult to learn nginx module developent at first, especially missing C/C++ in a nginx module (when using thrift)  
+	2. it's difficult to learn nginx module developent at first, especially mixing C/C++ in a nginx module (when using thrift)  
 	3. Learning
 
 * This module using Apache thrift, boost, and ConncurrentQueue.hpp (to create connection pool to thrift server), to install it your system must have thrift, and boost[system, thread) installed  
