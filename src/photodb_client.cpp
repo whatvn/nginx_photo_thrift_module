@@ -42,7 +42,7 @@ extern "C" {
                 boost::shared_ptr<TTransport> metadata_transport(new TFramedTransport(metadata_socket));
                 boost::shared_ptr<TProtocol> metadata_protocol(new TBinaryProtocol(metadata_transport));
                 try {
-                    cout << i << endl;
+                    //cout << i << endl;
                     metadata_transport->open();
                     PhotoDBClient *client_metadata = new PhotoDBClient(metadata_protocol);
 
@@ -71,7 +71,8 @@ extern "C" {
 
             photodb_client *client = new photodb_client;
 
-            client_queue.pop(*client, 0);
+            // wait 2 seconds 
+            client_queue.pop(*client, 1, 2);
             // get metadata
             MetaValueResult metadata_result;
             try {
