@@ -50,6 +50,11 @@ typedef struct { // Newly added
     unsigned long size;
 } request_info_;
 
+typedef struct {
+    ngx_array_t loc_confs; /* photo_thrift_conf_t */
+} ngx_photo_thrift_main_conf_t;
+
+
 struct bucket_t {
     ngx_http_request_t *r;
     ngx_chain_t **chain;
@@ -70,8 +75,11 @@ extern bucket_t *bucket_init(ngx_http_request_t *r) {
 
 
 static char *ngx_photo_thrift(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static void *ngx_photo_thrift_create_conf(ngx_conf_t *cf);
+static void *ngx_photo_thrift_create_location_conf(ngx_conf_t *cf);
 static char *ngx_photo_thrift_merge_conf(ngx_conf_t *cf, void *parent, void *child);
+static ngx_int_t ngx_http_photo_thrift_handler(ngx_http_request_t *req);
+static ngx_int_t ngx_http_photo_thrift_init_connection(ngx_cycle_t *cycle);
+static void *ngx_photo_thrift_create_main_conf(ngx_conf_t *cf);
 
 static ngx_command_t ngx_photo_thrift_commands[] = {
     { ngx_string("thrift"),
@@ -111,14 +119,14 @@ static ngx_command_t ngx_photo_thrift_commands[] = {
 static ngx_http_module_t ngx_photo_thrift_module_ctx = {
     NULL, /* preconfiguration */
     NULL, /* postconfiguration */
-
-    NULL, /* create main configuration */
+    ngx_photo_thrift_create_main_conf,
+//    NULL, /* create main configuration */
     NULL, /* init main configuration */
 
     NULL, /* create server configuration */
     NULL, /* merge server configuration */
 
-    ngx_photo_thrift_create_conf, /* create location configuration */
+    ngx_photo_thrift_create_location_conf, /* create location configuration */
     ngx_photo_thrift_merge_conf /* merge location configuration */
 };
 
@@ -129,7 +137,8 @@ ngx_module_t ngx_photo_thrift_module = {
     NGX_HTTP_MODULE, /* module type */
     NULL, /* init master */
     NULL, /* init module */
-    NULL, /* init process */
+//    NULL, /* init process */
+    ngx_http_photo_thrift_init_connection,
     NULL, /* init thread */
     NULL, /* exit thread */
     NULL, /* exit process */

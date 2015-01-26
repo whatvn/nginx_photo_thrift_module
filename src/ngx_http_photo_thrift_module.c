@@ -6,9 +6,13 @@
  */
 
 
+#include <signal.h>
+
 #include "ngx_http_photo_thrift_module.h"
 #include "photodb_client.h"
 #include "murmur3.h"
+#include <signal.h>
+
 
 
 #ifdef DISABLE_INLINE_FUNCTIONS
@@ -41,8 +45,24 @@
 
 
 
+static void *ngx_photo_thrift_create_main_conf(ngx_conf_t *cf) {
+    ngx_photo_thrift_main_conf_t  *photo_thrift_main_conf;
 
-static void *ngx_photo_thrift_create_conf(ngx_conf_t *cf) {
+    photo_thrift_main_conf = ngx_pcalloc(cf->pool, sizeof(ngx_photo_thrift_main_conf_t));
+    if (photo_thrift_main_conf == NULL) {
+        return NULL;
+    }
+
+    if (ngx_array_init(&photo_thrift_main_conf->loc_confs, cf->pool, 4,
+                       sizeof(ngx_photo_thrift_main_conf_t *))
+        != NGX_OK) {
+        return NULL;
+    }
+
+    return photo_thrift_main_conf;
+}
+
+static void *ngx_photo_thrift_create_location_conf(ngx_conf_t *cf) {
     photo_thrift_conf_t *conf;
     conf = ngx_palloc(cf->pool, sizeof (photo_thrift_conf_t));
     if (conf == NULL) {
@@ -58,26 +78,42 @@ static void *ngx_photo_thrift_create_conf(ngx_conf_t *cf) {
 static char *ngx_photo_thrift_merge_conf(ngx_conf_t *cf, void *parent, void *child) {
     photo_thrift_conf_t *prev = parent;
     photo_thrift_conf_t *conf = child;
-    ngx_conf_merge_str_value(conf->content_thrift_server, prev->content_thrift_server, "127.0.0.1");
+    photo_thrift_conf_t **photo_thrift_conf; // same as 2 above, to push to main configuration
+    ngx_photo_thrift_main_conf_t *photo_thrift_main_conf = ngx_http_conf_get_module_main_conf(cf, ngx_photo_thrift_module);
+    ngx_conf_merge_str_value(conf->content_thrift_server, prev->content_thrift_server, NULL);
     ngx_conf_merge_str_value(conf->content_thrift_port, prev->content_thrift_port, "10021");
-    ngx_conf_merge_str_value(conf->meta_thrift_server, prev->meta_thrift_server, "127.0.0.1");
+    ngx_conf_merge_str_value(conf->meta_thrift_server, prev->meta_thrift_server, NULL);
     ngx_conf_merge_str_value(conf->meta_thrift_port, prev->meta_thrift_port, "10022");
+    
+    // push to main configuration
+    if(conf->content_thrift_server.data && conf->meta_thrift_server.data) {
+        photo_thrift_conf = ngx_array_push(&photo_thrift_main_conf->loc_confs);
+        *photo_thrift_conf = conf;
+    }
+//    printf("content thrift server: %s\n", (const char*) conf->content_thrift_server.data);
     return NGX_CONF_OK;
+}
+
+
+static ngx_int_t ngx_http_photo_thrift_init_connection(ngx_cycle_t *cycle) {
+    ngx_photo_thrift_main_conf_t *photo_thrift_main_conf = ngx_http_cycle_get_module_main_conf(cycle,  ngx_photo_thrift_module);
+    photo_thrift_conf_t **clcf;
+    signal(SIGPIPE, SIG_IGN);
+    clcf = photo_thrift_main_conf->loc_confs.elts;
+    
+    char content_server_address[20];
+    char meta_server_address[20];
+    ngx_int_t content_server_port, meta_server_port;
+    content_server_port = ngx_atoi(clcf[0]->content_thrift_port.data, clcf[0]->content_thrift_port.len);
+    meta_server_port = ngx_atoi(clcf[0]->meta_thrift_port.data, clcf[0]->meta_thrift_port.len);
+    strncpy(content_server_address, (const char *) clcf[0]->content_thrift_server.data, clcf[0]->content_thrift_server.len);
+    strncpy(meta_server_address, (const char *) clcf[0]->meta_thrift_server.data, clcf[0]->meta_thrift_server.len);
+    init_thrift_connection_pool(30, meta_server_address, (int) meta_server_port, content_server_address, (int) content_server_port);
+    return NGX_OK;
 }
 
 static ngx_int_t ngx_http_photo_thrift_handler(ngx_http_request_t *req) {
     ngx_int_t rc;
-    photo_thrift_conf_t *clcf;
-    clcf = ngx_http_get_module_loc_conf(req, ngx_photo_thrift_module);
-    char content_server_address[20];
-    char meta_server_address[20];
-    ngx_int_t content_server_port, meta_server_port;
-    content_server_port = ngx_atoi(clcf->content_thrift_port.data, clcf->content_thrift_port.len);
-    meta_server_port = ngx_atoi(clcf->meta_thrift_port.data, clcf->meta_thrift_port.len);
-    strncpy(content_server_address, (const char *) clcf->content_thrift_server.data, clcf->content_thrift_server.len);
-    strncpy(meta_server_address, (const char *) clcf->meta_thrift_server.data, clcf->meta_thrift_server.len);
-    init_thrift_connection_pool(30, meta_server_address, (int) meta_server_port, content_server_address, (int) content_server_port);
-
     if (!(req->method & (NGX_HTTP_GET | NGX_HTTP_HEAD)))
         return NGX_HTTP_NOT_ALLOWED;
 
